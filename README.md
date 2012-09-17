@@ -12,4 +12,7 @@ Development Environment:
 
 Mac Pro snow leopard 10.6.8
 Python 2.7
-Module Dependence: ---
+Module Dependence:
+urllib2
+urlparse
+BeautifulSoup
