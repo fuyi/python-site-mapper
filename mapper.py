@@ -1,6 +1,7 @@
 from urllib2 import * # http client
 from BeautifulSoup import BeautifulSoup # html parser
 from urlparse import urlparse # url parser
+import time
 
 class Graph():
     """class for page graph"""
@@ -107,5 +108,7 @@ def mapper():
         print p.url
 
 if __name__ == "__main__":
+    start_time = time.time()
     mapper()
+    print "execution time: ", time.time() - start_time, "seconds"
         
