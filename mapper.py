@@ -4,6 +4,8 @@ from urlparse import urlparse # url parser
 import threading
 import Queue
 import time
+import sys, getopt 
+from util import *
 
 class GraphThread(threading.Thread):
     def __init__(self, p, graph, queue):
@@ -20,6 +22,7 @@ class GraphThread(threading.Thread):
                 pass
             else:
                 page = Page(link)
+                # time.sleep(1)
                 if not page.dead_page:
                     self.graph.addPage(page)
                 else:
@@ -43,29 +46,29 @@ class Graph():
             if not self.findPage(p.url):
                 self.addPage(p)
             # step 3, generate pages for each internal link and add to page next, add page to graph if it is a new page
-            # method 1: multithread implementation
-            queue = Queue.Queue()
-            for link in p.in_links:
-                queue.put(link)
-            for i in range(10):
-                t = GraphThread(p,self,queue)
-                t.setDaemon(True)
-                t.start()
-            queue.join()
-            # method 2: synchronized implementation
+            # method 1: multithread implementation TODO: investigate why thread is slow
+            # queue = Queue.Queue()
             # for link in p.in_links:
-            #     page = self.findPage(link) if self.findPage(link) else self.findDeadPage(link)
-            #     if page: # page already exist on graph, do nothing
-            #         pass
-            #     else: 
-            #         page = Page(link) # page not exist, create new page
-            #         if not page.dead_page:
-            #             self.addPage(page) # add new page to graph if not dead page
-            #         else: # page is dead page, add to deadpage list
-            #             self.addDeadPage(page)
-            #     if not page.dead_page:
-            #         self.addNext(p,page) # add page to current pages next list if not deadpage
-            #     self.buildGraph(page) # recursively build graph
+            #     queue.put(link)
+            # for i in range(10):
+            #     t = GraphThread(p,self,queue)
+            #     t.setDaemon(True)
+            #     t.start()
+            # queue.join()
+            # method 2: synchronized implementation
+            for link in p.in_links:
+                page = self.findPage(link) if self.findPage(link) else self.findDeadPage(link)
+                if page: # page already exist on graph, do nothing
+                    pass
+                else: 
+                    page = Page(link) # page not exist, create new page
+                    if not page.dead_page:
+                        self.addPage(page) # add new page to graph if not dead page
+                    else: # page is dead page, add to deadpage list
+                        self.addDeadPage(page)
+                if not page.dead_page:
+                    self.addNext(p,page) # add page to current pages next list if not deadpage
+                self.buildGraph(page) # recursively build graph
 
     # find if a page with giving url existing in graph or not
     def findPage(self, url):
@@ -127,16 +130,35 @@ class Page():
                 parts = urlparse(a['href'])
                 if parts.netloc == self.domain or parts.netloc =='': # filter only internal link
                     if parts.netloc == self.domain:
-                        link = self.scheme + "://" + a['href']
+                        if not parts.scheme:
+                            link = self.scheme + "://" + a['href']
+                        else: # has scheme
+                            link = a['href']
                     else: # empty domain name
                         link = self.scheme + "://" + self.domain + a['href']
                     self.in_links.append(link)
+                    print self.url + " has next: " + a['href']
             self.in_links = set(self.in_links) # get unique link
 
 # main function
-def mapper():
+def mapper(argv):
     # TODO: accept command line parameters
-    url = "http://www.beiouyou.com/"
+    url = None
+    try:
+        opts,args = getopt.getopt(argv,"hl:")
+    except getopt.GetoptError:
+        print_usage()
+
+    for opt, arg in opts:
+        if opt =='-h':
+            print_usage()
+            sys.exit()
+        elif opt =='-l':
+            url = url_fix(arg)
+    # exit if no url is specified
+    if not url:
+        print_usage()
+    # start executing
     mp = Page(url)
     graph=Graph()
     graph.buildGraph(mp)
@@ -147,6 +169,5 @@ def mapper():
 
 if __name__ == "__main__":
     start_time = time.time()
-    mapper()
+    mapper(sys.argv[1:])
     print "execution time: ", time.time() - start_time, "seconds"
-        
